@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>シャドバWB戦績カウンター</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #eef2f7, #f9fbfd);
+            color: #333;
+            margin: 20px;
+        }
+
+        h1,
+        h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        #overallStats {
+            margin-bottom: 30px;
+        }
+
+        #overallStats .main-rate {
+            font-size: 1.6em;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        #overallStats .sub-rate {
+            font-size: 1em;
+            color: #555;
+            display: block;
+        }
+
+        #overallStats .recent-rate {
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 6px;
+            display: block;
+        }
+
+        #leaders {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 20px;
+            justify-content: flex-start;
+        }
+
+        /* リーダーカード */
+        .leader-button {
+            flex: 0 0 150px;
+            height: 150px;
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+            transition: 0.25s;
+            font-weight: normal;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .leader-button div {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .leader-button:hover {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .leader-button.selected {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* サブテキスト */
+        .leader-button .substats {
+            font-size: 0.8em;
+            margin-top: 3px;
+            opacity: 0.9;
+        }
+
+        /* 先攻/後攻ボタン */
+        .turn-buttons {
+            margin: 12px 0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .turn-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            background: #ecf0f1;
+            transition: 0.2s;
+        }
+
+        .turn-buttons button.selected {
+            background: #f39c12;
+            color: #fff;
+        }
+
+        .turn-buttons button:hover {
+            opacity: 0.85;
+        }
+
+        /* 勝敗ボタン */
+        .stats button {
+            margin: 6px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2em;
+            transition: 0.2s;
+        }
+
+        #winBtn {
+            background: #2ecc71;
+            color: #fff;
+        }
+
+        #loseBtn {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .stats button:hover {
+            opacity: 0.9;
+        }
+
+        /* テーブル */
+        .table-container {
+            max-height: 320px;
+            overflow-y: auto;
+            margin-top: 10px;
+            border-radius: 12px;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: #fff;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: #34495e;
+            color: #fff;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        tr:hover {
+            background: #ecf0f1;
+        }
+
+        /* 勝敗ラベル */
+        .result-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: inline-block;
+            min-width: 50px;
+        }
+
+        .result-win {
+            background: #2ecc71;
+            color: #fff;
+        }
+
+        .result-lose {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        /* メニュー */
+        .menu-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: row-reverse;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-btn {
+            padding: 12px 18px;
+            border-radius: 50%;
+            background: #34495e;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .menu-items {
+            display: none;
+            gap: 10px;
+        }
+
+        .menu-items button {
+            padding: 10px 14px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: #fff;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+            font-weight: bold;
+        }
+
+        .menu-container.active .menu-items {
+            display: flex;
+        }
+
+        /* フッター */
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        footer a {
+            color: #2980b9;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .chart-groups {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+        }
+
+        .chart-block {
+            flex: 1 1 400px;
+            /* 横幅が広ければ横並び、狭ければ縦並び */
+        }
+
+        .chart-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        /* 追加: ボタンのスタイル */
+        #matchTable button {
+            padding: 4px 12px;
+            font-size: 0.9em;
+            border-radius: 8px;
+            background: #ecf0f1;
+            color: #333;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        #matchTable button:hover {
+            opacity: 0.85;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <h1>シャドバWB戦績カウンター</h1>
+    <div class="stats">
+        <h3>全体戦績</h3>
+        <div id="overallStats"></div>
+    </div>
+    <div>
+        <h3>相手リーダーを選択</h3>
+        <div id="leaders"></div>
+    </div>
+    <div class="stats">
+        <h3>先攻/後攻を選択</h3>
+        <div class="turn-buttons"> <button id="firstBtn">先攻</button> <button id="secondBtn">後攻</button> </div>
+        <h3>勝敗をカウント</h3>
+        <div class="turn-buttons"> <button id="winBtn">勝ち</button> <button id="loseBtn">負け</button> </div>
+    </div>
+    <div class="stats">
+        <h3>戦績一覧</h3>
+        <div class="table-container">
+            <table id="matchTable">
+                <thead>
+                    <tr>
+                        <th>日付</th>
+                        <th>リーダー</th>
+                        <th>先攻/後攻</th>
+                        <th>勝敗</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <h3>勝敗割合</h3>
+        <div class="chart-groups">
+            <div class="chart-block">
+                <h3 style="color:#2ecc71;">勝ち</h3>
+                <div class="chart-row">
+                    <div>
+                        <h4>全体</h4> <canvas id="overallWinChart" width="220" height="220"></canvas>
+                    </div>
+                    <div>
+                        <h4>先攻</h4> <canvas id="firstWinChart" width="220" height="220"></canvas>
+                    </div>
+                    <div>
+                        <h4>後攻</h4> <canvas id="secondWinChart" width="220" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-block">
+                <h3 style="color:#e74c3c;">負け</h3>
+                <div class="chart-row">
+                    <div>
+                        <h4>全体</h4> <canvas id="overallLoseChart" width="220" height="220"></canvas>
+                    </div>
+                    <div>
+                        <h4>先攻</h4> <canvas id="firstLoseChart" width="220" height="220"></canvas>
+                    </div>
+                    <div>
+                        <h4>後攻</h4> <canvas id="secondLoseChart" width="220" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="menu-container" id="menu"> <button class="menu-btn">⚙</button>
+        <div class="menu-items"> <button id="exportBtn">📤 エクスポート</button> <button id="importBtn">📥 インポート</button>
+            <button id="clearAllBtn">🗑 全削除</button>
+        </div>
+    </div>
+    <footer>
+        <p>GitHub : <a href="https://github.com/furubarug/sh-wb-counter" target="_blank"
+                rel="noopener noreferrer">https://github.com/furubarug/sh-wb-counter</a></p>
+    </footer>
+    <script>
+        const leaders = [
+            { name: "エルフ", color: "#27ae60" },
+            { name: "ロイヤル", color: "#f1c40f" },
+            { name: "ウィッチ", color: "#8e44ad" },
+            { name: "ドラゴン", color: "#e67e22" },
+            { name: "ナイトメア", color: "#c0392b" },
+            { name: "ビショップ", color: "#7f8c8d" },
+            { name: "ネメシス", color: "#2980b9" }
+        ];
+        let selectedLeader = null;
+        let selectedTurn = null;
+        let matches = JSON.parse(localStorage.getItem("matches") || "[]");
+        function calcRate(data) {
+            if (data.length === 0) return { winRate: 0, firstWinRate: 0, secondWinRate: 0, win: 0, lose: 0, firstWin: 0, firstLose: 0, secondWin: 0, secondLose: 0 };
+            const wins = data.filter(m => m.result === "勝ち").length;
+            const losses = data.length - wins;
+            const first = data.filter(m => m.turn === "先攻");
+            const second = data.filter(m => m.turn === "後攻");
+            return {
+                winRate: (wins / data.length * 100).toFixed(1),
+                firstWinRate: first.length ? (first.filter(m => m.result === "勝ち").length / first.length * 100).toFixed(1) : "-",
+                secondWinRate: second.length ? (second.filter(m => m.result === "勝ち").length / second.length * 100).toFixed(1) : "-",
+                win: wins,
+                lose: losses,
+                firstWin: first.filter(m => m.result === "勝ち").length,
+                firstLose: first.filter(m => m.result === "負け").length,
+                secondWin: second.filter(m => m.result === "勝ち").length,
+                secondLose: second.filter(m => m.result === "負け").length,
+            };
+        }
+        function renderLeaderButtons() {
+            const container = document.getElementById("leaders");
+            container.innerHTML = "";
+            leaders.forEach(({ name, color }) => {
+                const data = matches.filter(m => m.leader === name);
+                const stats = calcRate(data);
+                const btn = document.createElement("div");
+                const isSelected = selectedLeader === name;
+                btn.className = "leader-button" + (isSelected ? " selected" : "");
+                btn.style.border = `3px solid ${color}`;
+                btn.style.color = isSelected ? "#fff" : color;
+                btn.style.background = isSelected ? color : "#fff";
+                btn.innerHTML = ` <div style="font-size:1.2em;">${name}</div> <div class="substats">全体: ${stats.winRate}% (${stats.win}-${stats.lose})</div> <div class="substats">先攻: ${stats.firstWinRate}% (${stats.firstWin}-${stats.firstLose})</div> <div class="substats">後攻: ${stats.secondWinRate}% (${stats.secondWin}-${stats.secondLose})</div> `;
+                btn.onclick = () => { selectedLeader = isSelected ? null : name; renderLeaderButtons(); };
+                container.appendChild(btn);
+            });
+        }
+        const firstBtn = document.getElementById("firstBtn");
+        const secondBtn = document.getElementById("secondBtn");
+        firstBtn.onclick = () => { selectedTurn = selectedTurn === "先攻" ? null : "先攻"; updateTurnButtons(); };
+        secondBtn.onclick = () => { selectedTurn = selectedTurn === "後攻" ? null : "後攻"; updateTurnButtons(); };
+        function updateTurnButtons() { firstBtn.classList.toggle("selected", selectedTurn === "先攻"); secondBtn.classList.toggle("selected", selectedTurn === "後攻"); }
+        function addMatch(win) {
+            if (!selectedLeader) { alert("リーダーを選択してください"); return; }
+            if (!selectedTurn) { alert("先攻/後攻を選択してください"); return; }
+            matches.push({ date: new Date().toLocaleString(), leader: selectedLeader, turn: selectedTurn, result: win ? "勝ち" : "負け" });
+            saveAndRender();
+            selectedLeader = null; selectedTurn = null; updateTurnButtons(); renderLeaderButtons();
+        }
+        let charts = {};
+        function renderCharts() {
+            Object.values(charts).forEach(c => c.destroy());
+            charts = {};
+            function makeData(turn, result) {
+                const filtered = matches.filter(m => (!turn || m.turn === turn) && m.result === result);
+                return leaders.map(l => filtered.filter(m => m.leader === l.name).length);
+            }
+            function makeChart(ctxId, turn, result) {
+                const data = makeData(turn, result);
+                const labels = leaders.map(l => l.name);
+                const colors = leaders.map(l => l.color);
+                charts[ctxId] = new Chart(document.getElementById(ctxId), {
+                    type: "pie",
+                    data: { labels, datasets: [{ data, backgroundColor: colors }] },
+                    options: {
+                        responsive: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: (ctx) => ctx.label + ": " + ctx.parsed } }
+                        }
+                    }
+                });
+            }
+            makeChart("overallWinChart", null, "勝ち");
+            makeChart("firstWinChart", "先攻", "勝ち");
+            makeChart("secondWinChart", "後攻", "勝ち");
+
+            makeChart("overallLoseChart", null, "負け");
+            makeChart("firstLoseChart", "先攻", "負け");
+            makeChart("secondLoseChart", "後攻", "負け");
+        }
+        function saveAndRender() {
+            localStorage.setItem("matches", JSON.stringify(matches)); renderOverallStats(); renderLeaderButtons(); renderTable(); renderCharts();
+        }
+        function renderOverallStats() {
+            const overall = calcRate(matches);
+            const recent10 = calcRate(matches.slice(-10));
+            document.getElementById("overallStats").innerHTML = ` <span class="main-rate">全体勝率: ${overall.winRate}% (${overall.win}-${overall.lose})</span> <span class="sub-rate">先攻: ${overall.firstWinRate}% (${overall.firstWin}-${overall.firstLose}) / 後攻: ${overall.secondWinRate}% (${overall.secondWin}-${overall.secondLose})</span> <span class="recent-rate">直近10戦: ${recent10.winRate}% (${recent10.win}-${recent10.lose})</span> `;
+        }
+        function renderTable() {
+            const tbody = document.querySelector("#matchTable tbody");
+            tbody.innerHTML = "";
+            matches.forEach((m, index) => {
+                const tr = document.createElement("tr");
+                const leaderObj = leaders.find(l => l.name === m.leader);
+                const leaderColor = leaderObj ? leaderObj.color : "#999";
+                tr.innerHTML = ` <td>${m.date}</td> <td style="color:${leaderColor}; font-weight:bold;">${m.leader}</td> <td>${m.turn}</td> <td><span class="result-badge ${m.result === "勝ち" ? "result-win" : "result-lose"}">${m.result}</span></td> <td><button onclick="deleteMatch(${index})">削除</button></td> `;
+                tbody.prepend(tr);
+            });
+        }
+        function deleteMatch(index) {
+            matches.splice(index, 1); saveAndRender();
+        }
+        document.getElementById("winBtn").onclick = () => addMatch(true);
+        document.getElementById("loseBtn").onclick = () => addMatch(false);
+
+        const menu = document.getElementById("menu");
+        menu.querySelector(".menu-btn").onclick = () => menu.classList.toggle("active");
+
+        const exportBtn = document.getElementById("exportBtn");
+        exportBtn.onclick = () => {
+            const blob = new Blob([JSON.stringify(matches, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "matches.json";
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+        const importBtn = document.getElementById("importBtn");
+        importBtn.onclick = () => {
+            const input = document.createElement("input");
+            input.type = "file";
+            input.accept = "application/json";
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    try {
+                        matches = JSON.parse(ev.target.result);
+                        saveAndRender();
+                    } catch (err) {
+                        alert("インポート失敗");
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        };
+        document.getElementById("clearAllBtn").onclick = () => {
+            if (confirm("本当に全ての戦績を削除しますか？")) { matches = []; saveAndRender(); }
+        }
+        saveAndRender();
+    </script>
+</body>
+
+</html>
